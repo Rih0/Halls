@@ -175,7 +175,6 @@ void rotate(node * p)
 #define SAMELINE(p,chd) (p->fa->fa->chd == p->fa && p->fa->chd == p)
 void splay(node * p)
 {
-    
     if (p == NULLS)
     return ;
     p->push_down();
@@ -301,6 +300,9 @@ void change(node * p, int val)
     p->val = val;
     p->update();
 }
+// 在处理权在边上的情况时，这种处理方式是最好的，每次都像access一样一次。
+// 如果是权在点上，参见hdu那个代码的做法，更简易，但也有问题，如果有求和类的操作
+// 感觉就不太好了。
 void negpath(node * x , node * y)
 {
     node * rt;
