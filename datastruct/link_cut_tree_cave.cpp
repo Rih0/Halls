@@ -74,6 +74,7 @@ const double eps=1e-8;
 const double pi=acos(-1.0);
 const int MOD=1000000007;
 const int MAXN = 11000;
+
 int N,M;
 struct node
 {
@@ -103,6 +104,16 @@ node * node::NULLS = (&EMP);
 node * NULLS = node::NULLS;
 node data[MAXN];
 int datap;
+node * NEWNODE(int i)
+{
+    node * p = &data[++datap];
+    p->num = i;
+    p->l = p->r = p->fa = p->path = NULLS;
+    p->rev = 0;
+    return p;
+}
+
+// basic of lct
 node * tonode[MAXN];
 int fa[MAXN];
 node * NEWNODE(int i)
@@ -226,3 +237,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
+
