@@ -1,6 +1,8 @@
 // zkw
-// sample : codeforces
-// 5.10.2014 7day happy 4th
+// sample : Andrew Stankevich's Contest (3) Beloved sons
+// codeforces http://codeforces.com/gym/100198
+// 5.10.2014 7day happy ACS-3
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
