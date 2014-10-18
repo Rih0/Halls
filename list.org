@@ -1,0 +1,2476 @@
+
+* Math
+** Matrix Pow  
+#+BEGIN_SRC cpp
+template<class T>
+class mtype
+{
+public:
+     T mat[110][110];
+     static int MAXN;
+     mtype(){
+            clr(mat);
+     }
+     void show(int M) {
+            for (int i = 1; i <= M; ++i,puts(""))
+                  for (int j = 1; j <= M; ++j)
+                         pf("%I64d ",mat[i][j]);
+     }
+     mtype operator * (const mtype& b) {
+            mtype temp;
+            for(int i=1;i<=MAXN;i++)
+                  for(int j=1;j<=MAXN;j++)
+                         for(int k=1;k<=MAXN;k++)
+                         {
+                              temp.mat[i][j] += mat[i][k] * b.mat[k][j];
+                              temp.mat[i][j] %= MODS;
+                         }
+            return temp;
+     }
+     mtype getpow(int k) {
+
+            mtype ans;
+            mtype bitp = *this;
+            ft(i,1,MAXN)
+                  ans.mat[i][i] = 1;
+            while(k)
+            {
+                  if(k & 1)
+                         ans = ans * bitp;
+                  bitp = bitp * bitp;
+                  k = k >> 1;
+            }
+            return ans;
+     }
+};
+template<>
+int mtype<LL>::MAXN = 1;
+#+END_SRC
+* Algorithm
+** Netflow
+   + 网络流 sap
+   + 费用流 zkw
+   + 有下界的网络流可行流算法 lower\_bound\_sap (需求最大流只需二分Super T --> Super S的边的上界即可。最小流则是下界)
+*** sap
+#+BEGIN_SRC cpp
+//------------邻接表----------------------//
+const int MAXN=201;//定义最大点数和边数
+const int MAXM=201;
+const int INF=0x7fffffff;
+struct node
+{
+	int num,rest;//添加需要参数
+	node * next;
+	node * back;
+};
+node data[MAXM*3];
+node head[MAXN];
+int datap;
+void Ginit()
+{
+	datap=0;
+	memset(head,0,sizeof(head));
+}
+node * addE(int a,int b,int flow)//根据参数修改代码
+{
+	node * temp=head[a].next;
+	node * p=&data[++datap];
+	p->num=b,p->rest=flow,p->next=temp;
+	head[a].next=p;
+	return p;
+}
+//----------网络流sap-------------------//
+void addit(int &a,int &b,int &c)//网络流特有加边
+{
+	node * p1=addE(a,b,c);
+	node * p2=addE(b,a,0);
+	p1->back=p2,p2->back=p1;
+}
+struct NetFlow//无需修改，仅仅需要自行处理建图部分
+{
+	int vd[MAXN];
+	int d[MAXN];
+	int S,T,N;
+	int aug(int num,int allflow)
+	{
+		if(num==T)
+		return allflow;
+		int flow=allflow;
+		int toflow,flowed;
+		for(node * p=head[num].next;p;p=p->next)
+		{
+			if(p->rest&&d[p->num]==d[num]-1)
+			{
+				toflow=min(flow,p->rest);
+				flowed=aug(p->num,toflow);
+				flow-=flowed;
+				p->rest-=flowed,p->back->rest+=flowed;
+				if(flow==0)
+				break;
+				if(d[S]>=N)
+				return allflow-flow;
+			}
+		}
+		if(flow==allflow)
+		{
+			vd[d[num]]--;
+			if(vd[d[num]]==0)
+			d[S]=N;
+			d[num]++;
+			vd[d[num]]++;
+		}
+		return allflow-flow;
+	}
+	int sap(int beg,int end,int n)
+	{
+		S=beg,T=end,N=n;
+		memset(d,0,sizeof(d));
+		memset(vd,0,sizeof(vd));
+		int ans=0;
+		vd[S]=N;
+		while(d[S]<N)
+		ans+=aug(S,INF);
+		return ans;
+	}
+}netflow;
+
+//一下为题目特有
+int N,M;
+int a,b,c;
+int main()
+{
+	while(scanf("%d",&M)!=EOF)
+	{
+		scanf("%d",&N);
+		for(int i=1;i<=M;i++)
+		{
+			scanf("%d%d%d",&a,&b,&c);
+			addit(a,b,c);
+		}
+		printf("%d\n",netflow.sap(1,N,N));
+		Ginit();
+	}
+	return 0;
+}
+#+END_SRC
+
+*** zkw
+#+BEGIN_SRC cpp
+const int MAXN = 411 * 3;
+int N;
+int S,T;
+int love[MAXN];
+bool vis[MAXN];
+struct edge_t{
+    int to;
+    int rest,cost;
+    int back;
+    edge_t(){};
+    edge_t(int to,int rest,int cost):to(to),rest(rest),cost(cost){};
+};
+vector<edge_t> maps[MAXN];
+int add_edge(int a,int b,int rest,int cost)
+{
+    maps[a].pb(edge_t(b,rest,cost));
+    maps[b].pb(edge_t(a,0,-cost));
+    maps[a][maps[a].size() - 1].back = maps[b].size() - 1;
+    maps[b][maps[b].size() - 1].back = maps[a].size() - 1;
+    return maps[a].size() - 1;
+}
+int a,b,c;
+
+void build()
+{
+    ft(i,1,N)
+    {
+        add_edge(S,i,1,-love[i]);
+    }
+    ft(i,1,N)
+    {
+        add_edge(N+i,T,1,0);
+    }
+}
+
+int cost,pi1;
+int aug(int num,int totflow)
+{
+    if (num == T)
+    {
+        return cost += pi1 * totflow, totflow;
+    }
+    vis[num] = 1;
+    int rest = totflow;
+    feach(maps[num],p){
+        if(p->rest && !p->cost && !vis[p->to]){
+            int temp = aug(p->to,min(p->rest,rest));
+            p->rest -= temp, maps[p->to][p->back].rest += temp, rest -= temp;
+            if(!rest) break;
+        }
+    }
+    return totflow - rest;
+}
+bool modify()
+{
+    int d = INF;
+    for (int i = S; i <= T; ++i)
+    {
+        if(vis[i]){
+            feach(maps[i],p){
+                if(p->rest && !vis[p->to] && p->cost < d)
+                d = p->cost;
+            }
+        }
+    }
+    if(d == INF)
+    return 0;
+    for (int i = S; i <= T; ++i)
+    {
+        if(vis[i]){
+            feach(maps[i],p){
+                p->cost -= d;
+                maps[p->to][p->back].cost +=d;
+            }
+        }
+    }
+    pi1 += d;
+    return 1;
+}
+void zkw()
+{
+    do
+    do
+    clr(vis);
+    while(aug(S,INF));
+    while(modify());
+}
+
+// zkw ends here
+vector<pii> keyedge;
+int ans[MAXN];
+void show()
+{
+    for (vector<pii>::itr i = keyedge.begin(); i != keyedge.end(); ++i)
+    {
+        if(maps[i->x][i->y].rest == 0)
+        {
+            ans[i->x] = maps[i->x][i->y].to - N;
+        }
+    }
+    ft(i,1,N)
+        printf("%d ",ans[i]);
+}
+int main(int argc, char *argv[])
+{
+    scanf("%d",&N);
+    S = 0;
+    T = N * 2 + 1;
+    ft(i,1,N)
+    {
+        scanf("%d",love + i);
+    }
+    ft(i,1,N)
+    {
+        int cnt;
+        scanf("%d",&cnt);
+        ft(j,1,cnt)
+        {
+            scanf("%d",&a);
+            int pos = add_edge(i,N + a,1,0);
+            keyedge.pb(pii(i,pos));
+        }
+    }
+    build();
+    zkw();
+    show();
+    return 0;
+}
+#+END_SRC
+
+*** lower-bound sap
+#+BEGIN_SRC cpp
+
+/*
+  POJ2396
+  NetFlow with lower_bound , source-terminal.
+  add fake-source and fake-terminal.
+  possible solution algorithm not maxium one.
+*/
+#define NEWNODE &data[++datap]
+const int INF=99999999;
+const int MAXN=500;
+const int MAXM=500;
+const int MAXC=MAXN*MAXM*2;
+int N,M,C;
+int S,T,tot,Ss,St;
+struct node
+{
+	int num,rest;
+	node * next,* back;
+};
+int d[MAXC];
+int vd[MAXC];
+node head[MAXC];
+node data[MAXC*10];
+int datap;
+int Nin[MAXC];
+int Nout[MAXC];
+int Hto[MAXC];
+int Lto[MAXC];
+int Cellto[MAXN][MAXM];
+int a,b,lim;
+char c;
+int hsum[MAXC];
+int lsum[MAXC];
+node * toe[MAXC];
+int tote;
+node * ans[MAXN][MAXM];
+int Cmin[MAXN][MAXM];
+int Cmax[MAXN][MAXM];
+node * addit(int a,int b,int c)
+{
+	node * temp=head[a].next;
+	node * p=NEWNODE;
+	head[a].next=p,p->next=temp;
+	p->num=b,p->rest=c;
+	return p;
+}
+node * addE(int a,int b,int c,int d)//c上界，d下界
+{
+	Nout[a]+=d,Nin[b]+=d;       // 对于每个点，记录它的入值和出值
+	node * p1=addit(a,b,c-d);
+	node * p2=addit(b,a,0);
+	p1->back=p2;
+	p2->back=p1;
+	return p1;
+}
+int aug(int num,int rest)
+{
+	if(num==St)
+	return rest;
+	int toflow=rest;
+	int flowed;
+	for(node * p=head[num].next;p;p=p->next)
+	{
+		if(p->rest)
+		{
+			if(d[p->num]==d[num]-1)
+			{
+				if(toflow<p->rest)
+				flowed=aug(p->num,toflow);
+				else
+				flowed=aug(p->num,p->rest);
+				toflow-=flowed;
+				p->rest-=flowed;
+				p->back->rest+=flowed;
+				if(toflow==0)
+				break;
+				if(d[Ss]>=tot)
+				return rest-toflow;
+			}
+		}
+	}
+	if(toflow==rest)
+	{
+		vd[d[num]]--;
+		if(vd[d[num]]==0)
+		d[Ss]=tot;
+		d[num]++;
+		vd[d[num]]++;
+	}
+	return rest-toflow;
+}
+int Sap()
+{
+	memset(d,0,sizeof(d));
+	memset(vd,0,sizeof(vd));
+	int ans=0;
+	vd[0]=tot;
+	while(d[Ss]<tot)
+	ans+=aug(Ss,INF);
+	return ans;
+}
+void Maket()
+{
+	for(int i=1;i<=N;i++)
+	for(int j=1;j<=M;j++)
+	Cmin[i][j]=0,Cmax[i][j]=INF;
+	int p=0;
+	for(int i=1;i<=N;i++)
+	for(int j=1;j<=M;j++)
+	Cellto[i][j]=++p;
+	for(int i=1;i<=N;i++)
+	Hto[i]=++p;
+	for(int i=1;i<=M;i++)
+	Lto[i]=++p;
+	S=0,T=p+1;
+	Ss=T+1,St=T+2;
+	tot=St+1;
+    // 设置基本的点编号
+}
+void init()
+{
+	memset(Nin,0,sizeof(Nin));
+	memset(Nout,0,sizeof(Nout));
+	memset(head,0,sizeof(head));
+	tote=0;
+	datap=0;
+	scanf("%d%d",&N,&M);
+	Maket();                    // 设置基本编号
+	for(int i=1;i<=N;i++)
+	scanf("%d",&hsum[i]);
+	for(int i=1;i<=M;i++)
+	scanf("%d",&lsum[i]);       // 行和与列和
+	scanf("%d",&C);             // 要求
+	for(int i=1;i<=C;i++)
+	{
+		scanf("%d%d%s%d",&a,&b,&c,&lim);
+		if(a==0&&b==0)
+		{
+			for(int i=1;i<=N;i++)
+			for(int j=1;j<=M;j++)
+			{
+				int &Min=Cmin[i][j];
+				int &Max=Cmax[i][j];
+				if(c=='>')
+				Min=max(lim+1,Min);
+				else if(c=='=')
+				Max=min(lim,Max),Min=max(lim,Min);
+				else
+				Max=min(lim-1,Max);
+			}
+		}
+		else if(b==0)
+		{
+			for(int i=1;i<=M;i++)
+			{
+				int &Min=Cmin[a][i];
+				int &Max=Cmax[a][i];
+				if(c=='>')
+				Min=max(lim+1,Min);
+				else if(c=='=')
+				Max=min(lim,Max),Min=max(lim,Min);
+				else
+				Max=min(lim-1,Max);
+			}
+		}
+		else if(a==0)
+		{
+			for(int i=1;i<=N;i++)
+			{
+				int &Min=Cmin[i][b];
+				int &Max=Cmax[i][b];
+				if(c=='>')
+				Min=max(lim+1,Min);
+				else if(c=='=')
+				Max=min(lim,Max),Min=max(lim,Min);
+				else
+				Max=min(lim-1,Max);
+			}
+		}
+		else
+		{
+			int &Min=Cmin[a][b];
+			int &Max=Cmax[a][b];
+			if(c=='>')
+			Min=max(lim+1,Min);
+			else if(c=='=')
+			Max=min(lim,Max),Min=max(lim,Min);
+			else
+			Max=min(lim-1,Max);
+		}
+	}
+	for(int i=1;i<=N;i++)
+	addE(S,Hto[i],hsum[i],hsum[i]);
+    // 每行的要求
+	for(int i=1;i<=N;i++)
+	for(int j=1;j<=M;j++)
+	addE(Hto[i],Cellto[i][j],INF,0);
+    // 行到点的边
+	for(int i=1;i<=N;i++)
+	for(int j=1;j<=M;j++)
+	ans[i][j]=addE(Cellto[i][j],Lto[j],Cmax[i][j],Cmin[i][j]);
+    // 点到列的边
+	for(int i=1;i<=M;i++)
+	addE(Lto[i],T,lsum[i],lsum[i]);
+    // 列到终点的边
+	addE(T,S,INF,0);
+    // 最后的
+}
+void built()
+{
+	for(int i=0;i<=T;i++)
+	if(Nin[i]>Nout[i])
+	addE(Ss,i,Nin[i]-Nout[i],0); // 如果in > out ， 连一天条从super source 到它的点
+	else
+	toe[++tote]=addE(i,St,Nout[i]-Nin[i],0); // 如果小于，它到super terminal 的边
+}
+bool check()
+{
+	for(node * p=head[Ss].next;p;p=p->next)
+	if(p->rest)
+	return 0;
+	for(int i=1;i<=tote;i++)
+	if(toe[i]->rest)
+	return 0;
+    // super source, terminal都必须是满流边
+	return 1;
+}
+int Q;
+int main()
+{
+	cin>>Q;
+	for(int q=1;q<=Q;q++)
+	{
+		init();
+		built();
+		Sap();
+		if(check())
+		{
+			for(int i=1;i<=N;i++,printf("\n"))
+			{
+				printf("%d",ans[i][1]->back->rest+Cmin[i][1]);
+				for(int j=2;j<=M;j++)
+				printf(" %d",ans[i][j]->back->rest+Cmin[i][j]);
+			}
+			printf("\n");
+		}
+		else
+		printf("IMPOSSIBLE\n");
+	}
+	return 0;
+}
+
+#+END_SRC
+
+** Scanning Line
+*** Area
+#+BEGIN_SRC cpp
+
+struct node
+{
+	 LL sumlen,cover;
+	 LL flag;
+};
+node tree[MAXN*4+100];
+
+void change(int p,int tbeg,int tend,int beg,int end,int flag)
+{
+	 if(tbeg >= beg && tend <= end) //简化写法，因为不会查询到下面的点,仅对包含线段进行更新，其他值通过递推关系得到
+     tree[p].cover += flag;
+	 else
+	 {
+		  int mid=(tbeg+tend)>>1;
+		  if(beg<mid)
+			   change(p<<1,tbeg,mid,beg,end,flag);
+		  if(mid<end)
+			   change((p<<1)+1,mid,tend,beg,end,flag);
+	 }
+	 if(tree[p].cover>0)//本线段被覆盖了
+		  tree[p].sumlen=tend-tbeg;
+	 else
+	 {
+		  if(tbeg+1==tend)
+			   tree[p].sumlen=0;
+		  else
+			   tree[p].sumlen=tree[p<<1].sumlen+tree[(p<<1)+1].sumlen;
+	 }
+}
+
+int N;
+struct edge
+{
+	 int x,y1,y2,flag;
+};
+edge data[MAXN*4*2];
+int datap;
+inline void addE(int x,int y1,int y2,int flag)
+{
+	 datap++;
+	 data[datap].x = x;
+	 data[datap].y1 = y1;
+	 data[datap].y2 = y2;
+	 data[datap].flag = flag;
+}
+void addRec(int x,int y,int xx,int yy)
+{
+	 if(x == xx || y == yy)
+		  return ;
+	 addE(x,y,yy,1);
+	 addE(xx,y,yy,-1);
+}
+void getRec(pii outd,pii outu,pii ind,pii inu)
+{
+	 addRec(outd.x,outd.y,ind.x,outu.y);
+	 addRec(ind.x,inu.y,inu.x,outu.y);
+	 addRec(ind.x,outd.y,inu.x,ind.y);
+	 addRec(inu.x,outd.y,outu.x,outu.y);
+}
+int a,b,c,d;
+bool cmp(const edge a,const edge b)
+{
+	 if(a.x == b.x)
+		  return a.flag > b.flag;
+	 return a.x < b.x;
+}
+void solve()
+{
+	 sort(&data[1],&data[datap+1],cmp);
+	 LL lastx = data[1].x;
+	 LL ans = 0;
+	 ft(i,1,datap)
+	 {
+		  ans += tree[1].sumlen*((LL)data[i].x-lastx);
+		  change(1,1,Mseg,data[i].y1,data[i].y2-1+1,data[i].flag);
+          //切记，此处不用在线段树线段末端点+1,因为联系其实际含义，其中间的长度，本来就是这个数
+		  lastx = data[i].x;
+	 }
+	 cout << ans << "\n";
+	 clr(tree);
+	 datap = 0;
+}
+int main(int argc, char *argv[])
+{
+	 while(~sf("%d",&N))
+	 {
+		  if(!N)
+			   break;
+		  ft(i,1,N)
+		  {
+			   sf("%d%d%d%d",&a,&b,&c,&d);
+			   a++,b++,c++,d++;//防止0点
+			   pii outd(a,b),outu(c,d);
+			   sf("%d%d%d%d",&a,&b,&c,&d);
+			   a++,b++,c++,d++;
+			   pii ind(a,b),inu(c,d);
+			   getRec(outd,outu,ind,inu);
+		  }
+		  solve();
+	 }
+	 return 0;
+}
+#+END_SRC
+
+*** Perimeter
+#+BEGIN_SRC cpp
+const int MAXL=50111;
+const int MAXN=50111;
+const int PY=0;
+struct node
+{
+    int beg,end;
+    int sumlen;
+    int cnt;
+    bool lc,rc;// 统计区间个数
+    int cover;//-1代表是杂色，0代表尚未被覆盖，>0个数代表覆盖次数
+    int flag;
+};
+node tree[MAXL*4+100];
+struct edge
+{
+    int x,y1,y2,flag;
+};
+edge shu[MAXN+100];
+int shup;
+void addone(int x,int y1,int y2,int flag)
+{
+    shu[++shup].x=x,shu[shup].y1=y1,shu[shup].y2=y2,shu[shup].flag=flag;
+}
+int cmp(const void * a,const void * b)
+{
+    if((*(edge *)a).x==(*(edge *)b).x)
+    return (*(edge *)b).flag-(*(edge *)a).flag;
+    return (*(edge *)a).x-(*(edge *)b).x;
+}
+void update(int p)
+{
+    tree[p].lc=tree[(p<<1)].lc;
+    tree[p].rc=tree[(p<<1)+1].rc;
+    tree[p].cnt=(tree[(p<<1)].cnt+tree[(p<<1)+1].cnt)-(tree[(p<<1)].rc&&tree[(p<<1)+1].lc);
+    tree[p].sumlen=tree[(p<<1)].sumlen+tree[(p<<1)+1].sumlen;
+    if(tree[p].beg!=tree[p].end-1)
+    if(tree[(p<<1)].cover==tree[(p<<1)+1].cover)
+    tree[p].cover=tree[(p<<1)].cover;
+    else
+    tree[p].cover=-1;
+}
+void Cit(int p,int num)
+{
+    tree[p].flag+=num;
+    if(tree[p].cover!=-1)
+    {
+        tree[p].cover+=num;
+        if(tree[p].cover>0)
+        {
+            tree[p].cnt=1;
+            tree[p].lc=tree[p].rc=1;
+            tree[p].sumlen=tree[p].end-tree[p].beg;
+        }
+        else
+        {
+            tree[p].cnt=0;
+            tree[p].lc=tree[p].rc=0;
+            tree[p].sumlen=0;
+        }
+    }
+    else
+    {
+        Cit(p<<1,tree[p].flag),Cit((p<<1)+1,tree[p].flag);
+        tree[p].flag=0;
+        update(p);
+    }
+}
+void PushDown(int p)
+{
+    if(tree[p].flag!=0)
+    {
+        if(tree[p].beg==tree[p].end-1)
+        tree[p].flag=0;
+        else
+        {
+            Cit(p<<1,tree[p].flag),Cit((p<<1)+1,tree[p].flag);
+            tree[p].flag=0;
+        }
+    }
+}
+void change(int p,int beg,int end,int c)
+{
+    PushDown(p);
+    if(tree[p].beg==beg&&tree[p].end==end)
+    {
+        Cit(p,c);
+        return ;
+    }
+    int mid=(tree[p].beg+tree[p].end)>>1;
+    if(end<=mid)
+    change(p<<1,beg,end,c);
+    else if(beg>=mid)
+    change((p<<1)+1,beg,end,c);
+    else
+    {
+        change(p<<1,beg,mid,c);
+        change((p<<1)+1,mid,end,c);	
+    }
+    update(p);
+}
+void built(int p,int beg,int end)
+{
+    if(beg+1==end)
+    {
+        tree[p].beg=beg,tree[p].end=end;
+        return ;
+    }
+    int mid=(beg+end)>>1;
+    tree[p].beg=beg,tree[p].end=end;
+    built(p<<1,beg,mid);
+    built((p<<1)+1,mid,end);
+    update(p);
+}
+int N;
+int ax,ay,bx,by;
+int ans;
+int lastx,lasty;
+int heng;
+int lie;
+int main()
+{
+    built(1,1,20010);
+    scanf("%d",&N);
+    for(int i=1;i<=N;i++)
+    {
+        scanf("%d%d%d%d",&ax,&ay,&bx,&by);
+        ax+=PY;
+        ay+=PY;
+        bx+=PY;
+        by+=PY;
+        addone(ax,ay,by,1);
+        addone(bx,ay,by,-1);
+    }
+    qsort(&shu[1],shup,sizeof(edge),cmp);
+    lastx=shu[1].x;
+    for(int i=1;i<=shup;i++)
+    {
+        ans+=(tree[1].cnt)*2*(shu[i].x-lastx);
+        change(1,shu[i].y1,shu[i].y2,shu[i].flag);
+        ans+=abs(tree[1].sumlen-lasty);
+        lasty=tree[1].sumlen;
+        lastx=shu[i].x;
+    }
+    printf("%d",ans);
+    //	system("pause");
+    return 0;
+}
+#+END_SRC
+
+** Tarjan series
+   + 有向图-强联通分量
+   + 无向图-双联通分量-割点-桥
+*** Directed
+#+BEGIN_SRC cpp
+vector<pii> edges[MAXN];
+
+//接受的图为vector<pii>,同时需要修改feach
+int sccn[MAXN];
+int dfn[MAXN];
+int low[MAXN];
+int dfc,cscc;
+stack<int> S;
+
+void tarjan(int now)
+{
+	 low[now]=dfn[now] = ++dfc;//增加时间戳
+	 S.push(now);//在堆栈中放入点
+	 feach(edges[now],i)
+	 {
+		  int to = i->x;
+		  if(!dfn[to])
+			   tarjan(to),low[now] = min(low[now],low[to]);
+		  else if(!sccn[to])
+			   low[now] = min(low[now],dfn[to]);
+	 }
+	 if(low[now] == dfn[now])
+	 {
+		  cscc++;
+		  while(1)
+		  {
+			   int x = S.top();
+			   S.pop();
+			   sccn[x] = cscc;
+			   if(x == now)
+					break;
+		  }
+	 }
+}
+
+#+END_SRC
+
+*** Undireted
+#+BEGIN_SRC cpp
+int vis[MAXN];
+int dfn[MAXN],low[MAXN];
+int dfc;
+bool iscut[MAXN];
+//bool brg[MAXN][MAXN];
+int maxs=0;
+
+vector<pii> edges[MAXN];
+
+void cut_brg(int cur,int fa) //适用于没有重边的图
+{
+    vis[cur] = 1;
+    dfn[cur] = low[cur] = ++dfc;
+    int child = 0;
+    int cuts = 0;
+    feach(edges[cur],p)
+    {
+        int to = p->x;
+        if(to != fa && vis[to]) //返祖边
+        low[cur] = min(low[cur],dfn[to]);
+        if(!vis[to])
+        {
+            cut_brg(to,cur);
+            child++;
+            low[cur] = min(low[cur],low[to]);
+            if((fa == -1 && child > 1)||(fa != -1 && low[to] >= dfn[cur]))
+            iscut[cur] = 1, cuts ++;
+            if(low[to] > dfn[cur])  //brig judge
+            brg[to][cur] = brg[cur][to] = 1;
+        }
+    }
+    if(iscut[cur])
+    maxs = max(maxs,cuts);
+    vis[cur] = 2;
+}
+
+// 适用于有重边的图
+vector<pr<pii,int> > brigs;
+void cut_brg(int cur,node * fa) //适用于存在重边的图
+{
+	 vis[cur] = 1;
+	 dfn[cur] = low[cur] = ++dfc;
+	 for(node * p =head[cur];p;p=p->next)
+	 {
+		  int to = p->num;
+		  if(fa!= NULL &&p != fa->back && vis[to]) //返祖边
+			   low[cur] = min(low[cur],dfn[to]);
+		  if(!vis[to])
+		  {
+			   cut_brg(to,p);
+			   low[cur] = min(low[cur],low[to]);
+			   if(low[to] > dfn[cur])
+					brigs.pb(pr<pii,int>(pii(cur,to),p->val));
+		  }
+	 }
+}
+
+#+END_SRC
+
+pppp
+** Global Min-Cut
+*** Wagner
+#+BEGIN_SRC cpp
+#include<stdio.h>
+#include<string.h>
+
+#define NN 504
+#define INF 1 << 30
+int vis[NN];
+int wet[NN];
+int combine[NN];
+int map[NN][NN];
+
+int S, T, minCut, N;
+void Search(){
+     int i, j, Max, tmp;
+     memset(vis, 0, sizeof(vis));
+     memset(wet, 0, sizeof(wet));
+     S = T = -1;
+     for (i = 0; i < N; i++){
+         Max = -INF;
+         for (j = 0; j < N; j++){
+             if (!combine[j] && !vis[j] && wet[j] > Max){
+                tmp = j;
+                Max = wet[j];
+             }
+         }
+         if (T == tmp) return;
+         S = T; T = tmp;
+         minCut = Max;
+         vis[tmp] = 1;
+         for (j = 0; j < N; j++){
+             if (!combine[j] && !vis[j]){
+                wet[j] += map[tmp][j];
+             }
+         }
+     }
+}
+int Stoer_Wagner(){
+    int i, j;
+    memset(combine, 0, sizeof(combine));
+    int ans = INF;
+    for (i = 0; i < N - 1; i++){
+        Search();
+        if (minCut < ans) ans = minCut;
+        if (ans == 0) return 0;
+        combine[T] = 1;
+        for (j = 0; j < N; j++){
+            if (!combine[j]){
+               map[S][j] += map[T][j];
+               map[j][S] += map[j][T];
+            }
+        }
+    }
+    return ans;
+}
+int main()
+{
+    int a, b, c, M;
+    while(scanf("%d%d", &N, &M) != EOF){
+       memset(map, 0, sizeof(map));
+       while(M--){
+          scanf("%d%d%d", &a, &b, &c);
+          map[a][b] += c;
+          map[b][a] += c;
+       }
+       printf("%d\n", Stoer_Wagner());
+    }
+    return 0;
+}
+
+#+END_SRC
+
+** Hungary
+*** Hungart
+#+BEGIN_SRC cpp
+int match[];//匹配图
+bool dfs(int now)
+{
+	for(int )//遍历当前点的临接点
+	{
+		int &to=;//某个临接点
+		if(!vis[to])
+		{
+			vis[to]=1;
+			if(!match[to]||dfs(match[to]))//可以增广或者可以取反增广
+			{
+				match[to]=now;
+				return 1;
+			}
+		}
+	}
+	return 0;
+}
+int hungary()
+{
+	int ans=0;
+	for(int i=1;i<=N;i++)
+	{
+		memset(vis,0,sizeof(vis));
+		ans+=dfs(i);
+	}
+	return ans;
+}
+
+#+END_SRC
+** About graph
+
+*** SFPA minus-circle
+#+BEGIN_SRC cpp
+// 这段代码取自poj某题目，二分答案后，验证是否存在负权环
+// 边权的计算是当前价格减去货物的价格，再乘上个什么。
+bool negloop(int beg,int wealth)
+{
+    qtail = 1;
+    q[++qhead] = beg;
+    dist[beg] = wealth;
+    while(qhead >= qtail)
+    {
+        int now = q[qtail++];
+        inq[now] = 0;
+        for(node * p =head[now];p;p=p->next)
+        {
+            double len = (dist[now] - p->c) * p->r;
+            if(len > dist[p->to])
+            {
+                dist[p->to] = len;
+                if(!inq[p->to])
+                {
+                    q[++qhead] = p->to,inq[p->to] = 1,incnt[p->to]++;
+                    if(incnt[p->to] > N/4)
+                    return 1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+#+END_SRC
+
+*** shortest-loop
+#+BEGIN_SRC cpp
+while(~scanf("%d%d",&n,&m))
+{
+    for(i=1;i<=n;i++)
+    {
+        for(j=1;j<=n;j++)
+        {
+            mat[i][j]=dist[i][j]=INF;
+            pre[i][j]=i;
+        }
+    }
+
+    while(m--)
+    {
+        scanf("%d%d%d",&a,&b,&c);
+        mat[a][b]=mat[b][a]=dist[a][b]=dist[b][a]=find_min(mat[a][b],c);
+    }
+    int min=INF;
+    for(k=1;k<=n;k++)
+    {//最短路径外一点将最短路首尾链接,那么就得到一个最小环
+        for(i=1;i<k;i++)
+        {
+            for(j=i+1;j<k;j++)
+            {
+                //求最小环不能用两点间最短路松弛,因为(i,k)之间的最短路,(k,j)之间的最短路可能有重合的部分
+                //所以mat[][]其实是不更新的,这里和单纯的floyd最短路不一样
+                //dist[i][j]保存的是 i 到 j 的最短路权值和
+                int tmp=dist[i][j]+mat[i][k]+mat[k][j];//这里 k 分别和 i 还有 j 在mat中直接相连
+                if(tmp<min)
+                {
+                    min=tmp;
+                    num=0;
+                    int p=j;
+                    while(p!=i)
+                    {//回溯
+                        path[num++]=p;
+                        p=pre[i][p];//pre[i][j]表示 i 到 j 最短路径上 j 前面的一个点
+                    }
+                    path[num++]=i;
+                    path[num++]=k;
+                }
+            }
+        }
+        for(i=1;i<=n;i++)
+        {
+            for(j=1;j<=n;j++)
+            {
+                if(dist[i][j]>dist[i][k]+dist[k][j])
+                {
+                    dist[i][j]=dist[i][k]+dist[k][j];//dist[][]保存两点间最短距离
+                    pre[i][j]=pre[k][j];
+                }
+            }
+        }
+    }
+    if(min==INF)puts("No solution.");
+    else
+    {
+        printf("%d",path[0]);
+        for(i=1;i<num;i++)
+        printf(" %d",path[i]);
+        puts("");
+    }
+}
+
+
+#+END_SRC
+
+** Dancing Links X
+#+BEGIN_SRC cpp
+/*
+	POJ 3074 数独Dancing Links X
+	代码重构后的版本
+*/
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+using namespace std;
+#define NEWNODE (&data[++datap])
+const int INF=9999999;
+struct node
+{
+	node * l,*r,*u,*d,*back;
+	int type;
+};
+int typeto[1000][3];
+node * hang[10][10];
+node * lie[10][10];
+node * gong[10][10];
+node * placed[10][10];
+node * temp[100];
+node * head;
+node data[1000000];
+int ans[10][10];
+int datap;
+int S[1000];
+node * Hengadd(int num)//建立横向环
+{
+	node * temp=head->r;
+	node * p=NEWNODE;
+	p->u=p->d=p;
+	head->r=p,p->r=temp;
+	temp->l=p,p->l=head;
+	p->type=num;
+	return p;
+}
+node * Downadd(node * roots,int type)//建立纵向环
+{
+	S[roots->type]++;
+	node * temp=roots->d;
+	node * p=NEWNODE;
+	roots->d=p,p->d=temp;
+	temp->u=p,p->u=roots;
+	p->back=roots,p->type=type;
+	return p;
+}
+void headbuilt()//头建立
+{
+	int p=0;
+	for(int i=1;i<=9;i++)
+	for(int j=1;j<=9;j++)
+	{
+		placed[i][j]=Hengadd(++p);
+		hang[i][j]=Hengadd(++p);
+		lie[i][j]=Hengadd(++p);
+		gong[i][j]=Hengadd(++p);
+	}
+}
+void Chuan()
+{
+	for(int i=1;i<4;i++)
+	temp[i]->r=temp[i+1],temp[i+1]->l=temp[i];
+	temp[1]->l=temp[4],temp[4]->r=temp[1];
+}
+int GetG(int a,int b)//定位宫的位置
+{
+    return  ((a+2)/3-1)*3+((b+2)/3);
+}
+void built()
+{
+	int type=0;
+	for(int i=1;i<=9;i++)	
+	for(int j=1;j<=9;j++)
+	for(int k=1;k<=9;k++)
+	{
+		type++;
+		typeto[type][0]=k,typeto[type][1]=i,typeto[type][2]=j;
+		temp[1]=Downadd(hang[i][k],type);
+		temp[2]=Downadd(lie[j][k],type);
+		temp[3]=Downadd(placed[i][j],type);
+		temp[4]=Downadd(gong[GetG(i,j)][k],type);
+		Chuan();
+	}
+}
+void builtit()
+{
+	head=NEWNODE;
+	head->l=head->r=head->u=head->d=head;
+	headbuilt();
+	built();
+}
+void Cover(node * p)
+{
+	p->l->r=p->r;
+	p->r->l=p->l;
+	for(node * now=p->d;now!=p;now=now->d)
+		for(node * j=now->r;j!=now;j=j->r)
+		S[j->back->type]--,j->u->d=j->d,j->d->u=j->u;
+}
+void Cancel(node * p)
+{
+	p->l->r=p;
+	p->r->l=p;
+	for(node * now=p->u;now!=p;now=now->u)
+		for(node * j=now->l;j!=now;j=j->l)
+		S[j->back->type]++,j->u->d=j,j->d->u=j;
+}
+void ChoseOne(int i,int j,int k)
+{
+	node * r=placed[i][j];
+	Cover(r);
+	for(node*  p=r->d;p!=r;p=p->d)
+	{
+		if(typeto[p->type][0]==k)
+		{
+			for(node * j=p->r;j!=p;j=j->r)
+			Cover(j->back);
+		}
+	}
+}
+bool dfs(int dep)
+{
+	//cout<<dep<<endl;
+	if(head->r==head)
+	{
+		for(int i=1;i<=9;i++)
+		for(int j=1;j<=9;j++)
+		printf("%d",ans[i][j]);
+		printf("\n");
+		return 1;
+	}
+	int min=INF;
+	node * cho;
+	for(node * p=head->r;p!=head;p=p->r)
+	if(S[p->type]<min)
+		min=S[p->type],cho=p;
+	if(cho->u==cho)
+	return 0;
+	Cover(cho);
+	for(node * p=cho->d;p!=cho;p=p->d)
+	{
+		int &x=typeto[ p->type][1];
+		int &y=typeto[ p->type][2];
+		int &k=typeto[ p->type][0];
+		ans[x][y]=k;
+		for(node * j=p->l;j!=p;j=j->l)
+		Cover(j->back);
+		bool flag=dfs(dep+1);
+		if(flag)
+		return 1;
+		for(node * j=p->r;j!=p;j=j->r)
+		Cancel(j->back);
+		ans[x][y]=0;
+	}
+	Cancel(cho);
+	return 0;
+}
+char str1[1000];
+void clear()
+{
+	head=NULL;
+	datap=0;
+	memset(S,0,sizeof(S));
+}
+int main()
+{
+    while(scanf("%s",&str1[1])!=EOF)
+    {
+		if(str1[1]=='e'&&str1[2]=='n'&&str1[3]=='d')
+		break;
+		builtit();
+        int p=1;
+		for(int i=1;i<=9;i++)
+        for(int j=1;j<=9;j++)                            
+        {
+			if(str1[p]!='.')
+			{
+                ans[i][j]=str1[p]-'0'; 
+				ChoseOne(i,j,str1[p]-'0');
+			}
+			p++;
+		}
+		if(!dfs(1))
+		printf("NO\n");
+		clear();
+    }
+	return 0;
+}
+#+END_SRC
+
+* Data structure
+** splay
+#+BEGIN_SRC cpp
+const int MAXSN=MAXN+100;//最大点数!!!!!
+class spnode
+{
+public:
+	 static spnode * NULLS;
+	 spnode * l,*r,*fa;
+	 int cnt;
+
+	 /*data member*/
+	 bool flag_rev;
+	 int val;
+	 spnode(){
+		  cnt=val=0;
+		  flag_rev = 0;
+	 }
+	 void flip(){
+		  if(this != NULLS)
+		  {
+			   swap(l,r);
+			   flag_rev = !flag_rev;
+			   /*modify method*/
+			   //------example--------
+			   // sum+=ad*cnt;
+			   // val+=ad;
+			   // adds+=ad;
+			   //---记得标记之间的传递----
+		  }
+	 }
+	 void pushdown(){//传递标记操作
+		  /*pushdown method*/
+		  if(flag_rev)
+		  {
+			   l->flip(),r->flip();
+			   flag_rev = 0;
+		  }
+	 }
+	 void update(){
+		  /*update method*/
+		  cnt=l->cnt+r->cnt+1;
+	 }
+};
+spnode * spnode::NULLS = new spnode;
+#define NULLS spnode::NULLS
+#define itvhead head->r->l
+template<class node>
+class splaytree
+{
+public:
+	 node * head;
+	 node memstack[MAXSN];
+	 int memstackp;
+	 int flag_show;
+	 inline node * NEWNODE(node * fa){
+		  node * p=&memstack[++memstackp];
+		  p->l=p->r=NULLS;
+		  p->fa=fa;
+		  p->cnt = p->val = p->flag_rev = 0;
+		  return p;
+	 }
+	 splaytree(){
+		  head=NEWNODE(NULLS);
+		  head->r=NEWNODE(head);
+		  head->r->update();
+		  head->update();
+	 }
+	 void clear(){
+		  memstackp = 0;
+		  splaytree();
+	 }
+	 void routate(node * p){
+		  node * up=p->fa;
+		  up->pushdown(),p->pushdown();
+		  if(up==head)
+			   head=p;
+		  else
+		  {
+			   if(up->fa->r==up)
+					up->fa->r=p;
+			   else
+					up->fa->l=p;
+		  }
+		  p->fa=up->fa,up->fa=p;
+		  if(up->l==p)
+			   up->l=p->r,p->r->fa=up,p->r=up;
+		  else
+			   up->r=p->l,p->l->fa=up,p->l=up;
+		  up->update();
+		  p->update();
+	 }
+	 void splay(node * p,node * to){
+		  p->pushdown();
+		  while(p->fa!=to&&p->fa->fa!=to)
+		  {
+			   node * up=p->fa;
+			   if((up->fa->l==up&&up->l==p)||(up->fa->r==up&&up->r==p))
+			   {
+					routate(up);
+					routate(p);
+			   }
+			   else
+					routate(p),routate(p);
+		  }
+		  if(p->fa!=to)
+			   routate(p);
+		  p->update();
+	 }
+	 node * FindK(node * p,int k){
+		  while(p!=NULLS){
+			   p->pushdown();
+			   if(p->l->cnt+1==k)
+					return p;
+			   else if(p->l->cnt>=k)
+					p=p->l;
+			   else
+					k-=(p->l->cnt+1),p=p->r;
+		  }
+		  return NULLS;
+	 }
+	 int rank(int num){//对于不存在的数字，返回如果插入他后，他的rank
+		  citv(1,head->cnt-2);
+		  int ans=0;
+		  node * p = itvhead;
+		  while(p!=NULLS){
+			   p->pushdown();
+			   if(num>p->val)
+					ans+=p->l->cnt+1,p=p->r;
+			   else if(num<p->val)
+					p=p->l;
+			   else
+					return p->l->cnt+1+ans;
+		  }
+		  return ans+1;
+	 }
+	 void citv(int a,int b){//此处为题意中需要被放置于head->r->l的区间
+		  node * p1=FindK(head,a);//-1+1
+		  node * p2=FindK(head,b+2);//+1+1
+		  splay(p1,NULLS);
+		  splay(p2,head);
+	 }
+	 node * delitv(){
+		  node * tmp = itvhead;
+		  itvhead=NULLS;
+		  head->r->update();
+		  head->update();
+		  return tmp;
+	 }
+	 void delnum(int num){//删除掉指定的数字，请确保其存在
+		  int ranks=rank(num);
+		  citv(ranks,ranks);
+		  delitv();
+	 }
+	 void insert(int num){
+		  citv(1,head->cnt-2);//将实际区间提取出
+		  node * p= itvhead;
+		  node * pre = head->r;
+		  node ** prep = &head->r->l;
+		  while(p!=NULLS)
+		  {
+			   if(num>p->val)
+					pre=p,prep=&p->r,p=p->r;
+			   else
+					pre=p,prep=&p->l,p=p->l;
+		  }
+		  *prep=NEWNODE(pre);
+		  (*prep)->val=num;
+		  splay(*prep,NULLS);
+	 }
+	 void cut(int a,int b,int c){//将[a,b]位置的内容剪切到[c,c+1)中间
+		  citv(a,b);
+		  node * temp = delitv();
+		  citv(c+1,c);
+		  itvhead = temp;
+		  temp->fa = head->r; //切记更新父指针
+		  head->r->update();
+		  head->update();
+	 }
+	 void flip(int a,int b){ //翻转[a,b]区间
+		  citv(a,b);
+		  itvhead->flip();
+		  head->r->update();
+		  head->update();
+	 }
+	 void built(node * p,int beg,int end){
+		  if(beg == end)
+		  {
+			   p->cnt = 1,p->val = beg;
+			   return ;
+		  }
+		  int mid = (beg + end) >> 1;
+		  p->val = mid;
+		  if(beg <= mid -1) p->l = NEWNODE(p),built(p->l,beg,mid-1);
+		  if(mid + 1 <= end) p->r = NEWNODE(p),built(p->r,mid+1,end);
+		  p->update();
+	 }
+	 void built(int N){//建立一个完全平衡的二叉树
+		  citv(1,0);
+		  itvhead = NEWNODE(head->r);
+		  built(itvhead,1,N);
+	 }
+	 void show(node * p){
+         if(p == NULLS)
+			   return ;
+		  p->pushdown();
+		  show(p->l);
+		  if(flag_show == 1)
+			   pf(" %d",p->val);
+		  else
+			   pf("%d",p->val),flag_show=1;
+		  show(p->r);
+	 }
+	 void show(int N){//输出splay
+		  flag_show = 0;
+		  citv(1,N);
+		  show(itvhead);
+	 }
+};
+splaytree<spnode> splay;
+#+END_SRC
+
+** link-cut Tree
+  + link cut tree (边权版，poj3237),(综合版，not finished)
+#+BEGIN_SRC cpp
+// poj3237
+int T;
+int N;
+int a,b,c;
+typedef pr<pii,int> piii;
+vector<piii> maps[MAXN];
+bool vis[MAXN];
+int nodeval[MAXN];
+int fa[MAXN];
+int eto[MAXN];
+
+inline void get_max(int &a,const int b)
+{
+    if(b > a)
+    a = b;
+}
+
+struct node
+{
+    node * l, *r;
+    node * fa,* path;
+    bool neg;
+    int val,maxs,mins;
+    static node * NULLS;
+    void push_down(){
+        if(neg){
+            neg = 0;
+            l->do_neg();
+            r->do_neg();
+        }
+    }
+    void update(){
+        maxs = max(l->maxs,r->maxs);
+        maxs = max(maxs,val);
+        mins = min(l->mins,r->mins);
+        mins = min(mins,val);
+    }
+    void do_neg(){
+        if(this == NULLS){
+            return ;
+        }
+        neg = !neg;
+        val = - val;
+        int oldmax = maxs;
+        maxs = -mins;
+        mins = -oldmax;
+    }
+};
+node EMP;
+node * node::NULLS = (&EMP);
+node * NULLS = node::NULLS;
+node data[MAXN*2];
+int datap;
+node * tonode[MAXN];
+
+node * NEWNODE(int val)
+{
+    node * p = &data[++datap];
+    p->val = p->maxs = p->mins = val;
+    p->l = p->r = p->fa = p->path = NULLS;
+    p->neg = 0;                 // depends on individual problem
+    return p;
+}
+void lct_init()
+{
+    EMP.maxs = EMP.val = -INF;
+    EMP.mins = INF;
+}
+void rotate(node * p)
+{
+    node * up = p->fa;
+    up->push_down(),p->push_down();
+    // set upper inf
+    if (up->fa == NULLS) {
+        p->path = up->path;
+        up->path = NULLS;
+    } else {
+        if (up->fa->l == up) {
+            up->fa->l = p;
+        } else {
+            up->fa->r = p;
+        }
+    }
+    p->fa = up->fa;
+    up->fa = p;
+    if (up->l == p) {
+        up->l = p->r;
+        p->r->fa = up;
+        p->r = up;
+    } else {
+        up->r = p->l;
+        p->l->fa = up;
+        p->l = up;
+    }
+    up->update();
+    p->update();
+}
+#define SAMELINE(p,chd) (p->fa->fa->chd == p->fa && p->fa->chd == p)
+void splay(node * p)
+{
+    if (p == NULLS)
+    return ;
+    p->push_down();
+    while(p->fa != NULLS && p->fa->fa != NULLS){
+        if (SAMELINE(p,l) && SAMELINE(p,r)) {
+            rotate(p->fa),rotate(p);
+        } else {
+            rotate(p),rotate(p);
+        }
+    }
+    if(p->fa != NULLS){
+        rotate(p);
+    }
+    p->update();
+}
+void access(node * p)
+{
+    node * x = p;
+    node * y = NULLS;
+    while(x != NULLS){
+        splay(x);                           // 旋转到根
+        x->r->path = x, x->r->fa = NULLS;   // 切断右儿子(deeper)
+        x->r = y;                           // 等于刚才切开的
+        y->path = NULLS,y->fa = x;          // 刚才切的也接上
+        x->update();                        // 更新
+        y = x;                              // 迭代
+        x = x->path;                        // 迭代
+    }
+    splay(p);
+}
+node * lca(node * x, node * y)
+{
+    access(x);                  // 把lca加入重链
+    splay(y);                   //
+    node * rt = y->path;
+    while(rt != NULLS){
+        y = rt;
+        splay(y);
+        rt = y->path;
+    }
+    return y;                   // 最后lca是y
+}
+// 所有的求解最优解的过程，都在以上求lca的基础上进行变化
+// 请注意包括lca点的值，在while循环中需要考察
+
+void dfs(int now)
+{
+    vis[now] = 1;
+    feach(maps[now],p){
+        int to = p->x.x;
+        int len = p->x.y;
+        int eid = p->y;
+        if(!vis[to])
+        {
+            nodeval[to] = len;
+            fa[to] = now;
+            eto[eid] = to;
+            dfs(to);
+        }
+    }
+}
+void built()
+{
+    for (int i = 1; i <= N; ++i)
+    {
+
+        tonode[i] = NEWNODE(nodeval[i]);
+    }
+    for (int i = 1; i <= N; ++i)
+    {
+        if(fa[i] != 0)
+        {
+            tonode[i]->path = tonode[fa[i]];
+        }
+    }
+}
+void init(){
+    for (int i = 1; i < N; ++i)
+    {
+        scanf("%d%d%d",&a,&b,&c);
+        maps[a].pb(piii(pii(b,c),i));
+        maps[b].pb(piii(pii(a,c),i));
+    }
+    dfs(1);
+    built();
+}
+// void query(node * x,node * y)
+// {
+//     access(x);
+//     splay(y);
+//     node * rt = y->path;
+//     int maxs = -INF;
+//     while(rt != NULLS){
+//         get_max(maxs,y->val);
+//         get_max(maxs,y->l->maxs);
+//         y = rt;
+//         splay(y);
+//         rt = y->path;
+//     }
+//     get_max(maxs,y->r->maxs);
+//     // 不处理y->val是因为val on the edges
+//     printf("%d\n",maxs);
+// }
+void query(node * x, node * y)
+{
+    node * rt;
+    access(x);
+    for (rt = y, y = NULLS; rt != NULLS; y = rt, rt = rt->path)
+    {
+        splay(rt);
+        if(rt->path == NULLS){
+            printf("%d\n",max(rt->r->maxs,y->maxs));
+        }
+        rt->r->path = rt, rt->r->fa = NULLS;   // 切断右儿子(deeper)
+        rt->r = y;                           // 等于刚才切开的
+        y->path = NULLS,y->fa = rt;          // 刚才切的也接上
+        rt->update();                        // 更新
+    }
+}
+void change(node * p, int val)
+{
+    splay(p);
+    p->val = val;
+    p->update();
+}
+// 在处理权在边上的情况时，这种处理方式是最好的，每次都像access一样一次。
+// 如果是权在点上，参见hdu那个代码的做法，更简易，但也有问题，如果有求和类的操作
+// 感觉就不太好了。
+void negpath(node * x , node * y)
+{
+    node * rt;
+    access(x);
+    for (rt = y, y = NULLS; rt != NULLS; y = rt, rt = rt->path)
+    {
+        splay(rt);
+        if(rt->path == NULLS){
+            rt->r->do_neg(),y->do_neg();
+        }
+        rt->r->path = rt, rt->r->fa = NULLS;   // 切断右儿子(deeper)
+        rt->r = y;                           // 等于刚才切开的
+        y->path = NULLS,y->fa = rt;          // 刚才切的也接上
+        rt->update();                        // 更新
+    }
+}
+void clear(){
+    for (int i = 0; i < MAXN; ++i)
+    {
+        maps[i].clear();
+    }
+    clr(vis);
+    clr(nodeval);
+    clr(fa);
+    clr(eto);
+    datap = 0;
+}
+char str[MAXN];
+int main(int argc, char *argv[])
+{
+    lct_init();
+    scanf("%d",&T);
+    ft(tt,1,T){
+        scanf("%d",&N);
+        init();
+        while(1){
+            scanf("%s",str + 1);
+            if(str[1] == 'Q'){
+                scanf("%d%d",&a,&b);
+                query(tonode[a],tonode[b]);
+            } else if (str[1] == 'C') {
+                scanf("%d%d",&a,&b);
+                change(tonode[eto[a]],b);
+            } else if (str[1] == 'N') {
+                scanf("%d%d",&a,&b);
+                negpath(tonode[a],tonode[b]);
+            } else {
+                break;
+            }
+        }
+        clear();
+    }
+    return 0;
+}
+#+END_SRC
+  + link cut tree (树的形态，cave)
+#+BEGIN_SRC cpp
+
+int N,M;
+struct node
+{
+    int num;
+    node * l, *r;
+    node * fa,* path;
+    bool rev;
+    static node * NULLS;
+    void reverse(){
+        if(this == NULLS){
+            return ;
+        }
+        rev = !rev;
+        swap(l,r);
+    }
+    void push_down(){
+        if(rev){
+            rev = 0;
+            l->reverse();
+            r->reverse();
+        }
+    }
+    void update(){}
+};
+node EMP;
+node * node::NULLS = (&EMP);
+node * NULLS = node::NULLS;
+node data[MAXN];
+int datap;
+node * NEWNODE(int i)
+{
+    node * p = &data[++datap];
+    p->num = i;
+    p->l = p->r = p->fa = p->path = NULLS;
+    p->rev = 0;
+    return p;
+}
+
+// basic of lct
+node * tonode[MAXN];
+int fa[MAXN];
+node * NEWNODE(int i)
+{
+    node * p = &data[++datap];
+    p->num = i;
+    p->l = p->r = p->fa = p->path = NULLS;
+    p->rev = 0;
+    return p;
+}
+void rotate(node * p)
+{
+    node * up = p->fa;
+    up->push_down(),p->push_down();
+    // set upper inf
+    if (up->fa == NULLS) {
+        p->path = up->path;
+        up->path = NULLS;
+    } else {
+        if (up->fa->l == up) {
+            up->fa->l = p;
+        } else {
+            up->fa->r = p;
+        }
+    }
+    p->fa = up->fa;
+    up->fa = p;
+    if (up->l == p) {
+        up->l = p->r;
+        p->r->fa = up;
+        p->r = up;
+    } else {
+        up->r = p->l;
+        p->l->fa = up;
+        p->l = up;
+    }
+}
+#define SAMELINE(p,chd) (p->fa->fa->chd == p->fa && p->fa->chd == p)
+void splay(node * p)
+{
+    p->push_down();
+    while(p->fa != NULLS && p->fa->fa != NULLS){
+        if (SAMELINE(p,l) && SAMELINE(p,r)) {
+            rotate(p->fa),rotate(p);
+        } else {
+            rotate(p),rotate(p);
+        }
+    }
+    if(p->fa != NULLS){
+        rotate(p);
+    }
+}
+void access(node * p)
+{
+    node * x = p;
+    node * y = NULLS;
+    while(x != NULLS){
+        splay(x);                           // 旋转到根
+        x->r->path = x, x->r->fa = NULLS;   // 切断右儿子(deeper)
+        x->r = y;                           // 等于刚才切开的
+        y->path = NULLS,y->fa = x;          // 刚才切的也接上
+        y = x;                              // 迭代
+        x = x->path;                        // 迭代
+    }
+    splay(p);
+}
+int find_root(node * p)
+{
+    while(p->l != NULLS){
+        p = p->l;
+    }
+    return p->num;
+}
+void link(node * a,node * b)
+{
+    access(a);                  // 树上最深点使之成为最小点
+    a->reverse();               // 翻转使得它成为根
+    a->path = b;                // 同上
+    access(a);                  // 更新信息
+}
+void cut(node * a,node * b)
+{
+    access(a);
+    a->reverse();               // a成为树根
+    access(b);                  // b加入关键路径
+    b->l->path = NULLS;         // 切割
+    b->l->fa = NULLS;           // 切割
+    b->l = NULLS;               // 切割
+}
+void query(node * a,node * b)
+{
+    access(a);
+    int rt1 = find_root(a);
+    access(b);
+    int rt2 = find_root(b);
+    if (rt1 == rt2) {
+        printf("Yes\n");
+    } else {
+        printf("No\n");
+    }
+}
+char str[123];
+int a,b;
+int main(int argc, char *argv[])
+{
+    scanf("%d%d",&N,&M);
+    for (int i = 1; i <= N; ++i)
+    {
+        tonode[i] = NEWNODE(i);
+    }
+    for (int i = 1; i <= M; ++i)
+    {
+        scanf("%s%d%d",str + 1, &a, &b);
+        if (str[1] == 'C') {
+            link(tonode[a],tonode[b]);
+        } else if (str[1] == 'D') {
+            cut(tonode[a],tonode[b]);
+        } else {
+            query(tonode[a],tonode[b]);
+        }
+    }
+    return 0;
+}
+
+#+END_SRC
+
+** left-shift Heap
+#+BEGIN_SRC cpp
+//all the functions return a number(except for top() ) representing a fake 'pointer'
+const int MAXnode = MAXN;
+struct leftist
+{
+	 int tot,v[MAXnode],l[MAXnode],r[MAXnode],d[MAXnode];
+	 int merge(int x,int y) {
+		  if(!x)
+			   return y;
+		  if(!y)
+			   return x;
+		  if(v[x]<v[y]) //make sure that x is the root with more nodes
+			   swap(x,y);
+		  r[x] = merge(r[x],y);
+		  if(d[l[x]] < d[r[x]])
+			   swap(l[x],r[x]);
+		  d[x] = d[r[x]] + 1;
+		  return x;
+	 }
+	 int init(int x) {
+		  tot++;
+		  v[tot] = x;
+		  l[tot] = r[tot] = d[tot] = 0;
+		  return tot;
+	 }
+	 int insert(int x,int y) {
+		  return merge(x,init(y));
+	 }
+	 int top(int x) {
+		  return v[x];
+	 }
+	 int pop(int x) {
+		  return merge(l[x],r[x]);
+	 }
+};
+leftist ltree;
+#+END_SRC
+** bitarr
+#+BEGIN_SRC cpp
+const int bitmax = MAXN-1;
+template<class T>
+struct bitarrtype
+{
+	 T bitarr[bitmax+1];
+	 void add(int beg,T delta){
+		  for (int i = beg ; i <= bitmax; i += lowbit(i))
+			   bitarr[i] += delta;
+	 }
+	 T query(int num){
+		  T ans = 0;
+		  for (int i = num ; i; i -= lowbit(i))
+			   ans+=bitarr[i];
+		  return ans;
+	 }
+	 int findk(int k) {
+		  int ret = 0;
+		  for (int p = 1<<(int(log2(bitmax))); p; p >>= 1)
+			   if (ret+p < bitmax && bitarr[ret+p] < k)
+					k -= bitarr[ret+=p];
+		  return ret+1;
+	 }
+};
+//当将bitarr作为排名数组时，可以求一个数的排位（小于和等于它的数）和第k大的数的位置，支持插入和删除数
+#+END_SRC
+** bitarr-2D
+#+BEGIN_SRC cpp
+
+const int xbitmax = MAXN -1;
+const int ybitmax = MAXN -1;
+template<class T>
+struct bitmattype
+{
+	 T mat[MAXN][MAXN];
+	 // (xx,yy)+(x-1,y-1)-(xx,y-1)-(x-1,yy)
+	 void add(int x,int y,T delta){
+		  for(int i=x ;i<=xbitmax;i += lowbit(i))
+			   for (int j=y ;j <= ybitmax; j += lowbit(j))
+					mat[i][j] += delta;
+	 }
+	 T query(int a,int b){
+		  T ans = 0;
+		  for (int i=a ; i ; i -= lowbit(i))
+			   for (int j=b ; j; j -= lowbit(j))
+					ans += mat[i][j];
+		  return ans;
+	 }
+};
+#+END_SRC
+
+* String
+** algorithm
+   + kmp
+   + 扩展kmp
+   + BKDR Hash
+   + 最小表示法
+   + 最长回文串
+*** kmp
+#+BEGIN_SRC cpp
+void kmp(char * s,char * t,int * next)
+{
+	 int slen = strlen(&s[1]);
+	 int tlen = strlen(&t[1]);
+	 int j=0;
+	 int cnt = 0;
+	 ft(i,1,slen)
+	 {
+		  while(j != 0 && s[i]!=t[j+1]) j = next[j];
+		  if(s[i] == t[j+1]) j++;
+		  if(j == tlen) j=next[j],cnt++;
+	 }
+}
+void getnext(char * s,int * next)
+{
+	 int slen=strlen(&s[1]);
+	 next[1]=0;
+	 int j=0;
+	 ft(i,2,slen)
+	 {
+		  while(j != 0 && s[i] != s[j+1]) j=next[j];
+		  if(s[i] == s[j+1]) j++;
+		  next[i] = j;
+	 }
+}
+//所以可以推出一个重要的性质len-next[i]为此字符串的最小循环节(i为字符串的结尾)，另外如果
+//len%(len-next[i])==0,此字符串的最小周期就为len/(len-next[i]);
+#+END_SRC
+
+*** ext-kmp
+#+BEGIN_SRC cpp
+#include<iostream>
+#include <cstdio>
+#include <cstring>
+#include<iostream>
+#include<algorithm>
+using namespace std;
+const int MAXN=10000000;
+char S[MAXN];
+char T[MAXN];
+int Slen,Tlen;
+int next[MAXN];
+int ex[MAXN];
+void Getnext(char * s,int len)
+{
+	 next[1]=len;
+	 for(int i=1;i<=len;i++)
+	 {
+		  if(s[i+1]!=s[i])
+		  {
+			   next[2] = i-1;
+			   break;
+		  }
+	 }
+	 ////////////
+	 int j, k = 2, p, L;
+	 for(int i = 3; i <= len; i++) 
+	 {
+		  p = k + next[k] - 1; 
+		  L = next[i - k];
+		  if (i + L <= p) 
+			   next[i] = L; 
+		  else 
+		  {
+			   j = p - i + 1;
+			   if (j < 1) j = 1;
+			   while (i + j < len && s[i + j] == s[j]) 
+					j++;
+			   next[i] = j; 	k = i; 
+		  }
+	 }
+}
+
+void Getex()
+{
+	 int minlen=min(Slen,Tlen);
+	 ex[1]=minlen;
+	 for(int i=1;i<=minlen;i++)
+	 {
+		  if(S[i]!=T[i])
+		  {
+			   ex[1]=i;
+			   break;
+		  }
+	 }
+	 int j,k=1,p,l;
+	 for(int i=2;i<=Slen;i++)
+	 {
+		  p=k+ex[k]-1;
+		  l=next[i-k];
+		  if(i+l<=p)
+			   ex[i]=l;
+		  else
+		  {
+			   j=p-i+1;
+			   if(j<1) 
+					j=1;
+			   while(i+j<=Slen&&j<Tlen&&S[i+j]==T[j])
+					j++;
+			   ex[i]=j;
+			   k=i;
+		  }
+	 }
+}
+int main()
+{
+	 gets(&S[1]);
+	 gets(&T[1]);
+	 Slen=strlen(&S[1]);
+	 Tlen=strlen(&T[1]);
+	 Getnext(T,Tlen);
+	 Getex();
+	 for(int i=1;i<=Slen;i++)
+		  cout<<ex[i]<<" ";
+	 return 0;
+}
+
+#+END_SRC
+
+*** BKDR HASH
+#+BEGIN_SRC cpp
+unsigned int BKDRHash(char *str)
+{
+    unsigned int seed = 131; // 31 131 1313 13131 131313 etc..
+    unsigned int hash = 0;
+    while (*str)
+      hash = hash * seed + (*str++);
+    return (hash & 0x7FFFFFFF);
+}
+
+#+END_SRC
+
+*** Min Representation
+#+BEGIN_SRC cpp
+
+int MinRepresstation(string S)
+{
+	 int i = 0, j = 1, k = 0;
+	 int len = S.length();
+	 S += S;
+	 while(i < len && j < len)
+	 {
+		  k = 0;
+		  while(k < len && S[i + k] == S[j + k])
+			   k++;
+		  if(k >= len)
+			   break;
+		  if(S[i + k] > S[j + k])
+			   i = max(i + k + 1, j + 1);
+		  else
+			   j = max(i + 1, j + k + 1);
+	 }
+	 return min(i ,j);          // 返回的是起点
+}
+#+END_SRC
+
+*** longest plaindorome
+#+BEGIN_SRC cpp
+int rid[100000];
+string mana(const char *s)
+{
+    string t, res;
+    int L = strlen(s);
+    // init
+    t += '?';
+    for(int i = 0; i < L; i++)
+    t += '#', t += s[i];
+    t += "#*";
+    // getrid
+    for(int i=1,j=0,k,End=(int)t.size();i<End;){
+        while( t[i-j-1]==t[i+j+1] ) j++;
+        rid[i] = j;
+        for(k=1;k<=j&&(rid[i-k]!=rid[i]-k);k++)
+        rid[i+k] = min( rid[i-k], rid[i]-k );
+        i += k;
+        j = max( 0,j-k );
+    }
+    // Max
+    int m = 0, pos;
+    for(int i = 1; i < (int)t.size(); i++){
+        if( m < rid[i]*2+(t[i]!='#') )
+        m = rid[i]*2+(t[i]!='#'), pos = i;
+    }
+    for(int i = pos-rid[pos]; i <= pos+rid[pos]; i++){
+        if( t[i] != '#' ) res += t[i];
+    }
+    return res;
+}
+
+int calcit(const char * a)
+{
+    string fuck = mana(a);
+    return fuck.length();
+}
+#+END_SRC
+     
+** TODO data structure
+   + AC自动机
+   + 后缀数组 (not finished)
+*** AC-Automaton
+#+BEGIN_SRC cpp
+struct node
+{
+     int id;
+	 node * next[MAXN_C],*fail;
+	 node(int id = 0):id(id) {
+			   fail = NULL;
+			   clr(next);
+		  }
+} * head = new node();
+
+void ac_insert(char * s,int id)
+{
+	 node * p = head;
+	 int len = strlen(s + 1);
+	 for(int i = 1; i <= len ; i++)
+	 {
+		  int idx = s[i] - Cbase;
+		  if(!p->next[idx])
+			   p->next[idx] = new node();
+		  p = p->next[idx];
+	 }
+	 p -> id = id;
+}
+queue<node *> Q;
+void ac_fail()
+{
+	 head -> fail = NULL;
+	 Q.push(head);
+	 while(!Q.empty())
+	 {
+		  node * now = Q.front();
+		  Q.pop();
+		  ft(i,0,MAXN_C-1)
+		  {
+			   if(!now->next[i])
+			   {
+					now->next[i] = (now->fail == NULL) ? head : now->fail->next[i];
+					continue;
+					//直接建立为有限状态机
+			   }
+			   node * p = now ->fail;
+			   while(p)
+			   {
+					if(p->next[i])
+					{
+						 now->next[i]->fail = p->next[i];
+						 break;
+					}
+					p = p->fail;
+			   }
+			   if ( p == NULL)
+					now->next[i]->fail = head;
+			   Q.push(now->next[i]);
+		  }
+	 }
+}
+veci ans;
+void ac_find(char * s,int webid)
+{
+     int len = strlen(s + 1);
+     node * p = head;
+     ft(i,1,len)
+     {
+          int idx = s[i] - Cbase;
+          p = p->next[idx];
+
+		  //查询所有已匹配的部分
+          node * temp = p;
+          while (temp != head)
+          {
+               if(temp->id)
+                    ans.pb(temp->id);
+               temp = temp->fail;
+          }
+     }
+}
+
+char str[10000];
+char mstr[1000000];
+int N,M;
+int main()
+{
+     int cnt = 0;
+     sf("%d",&N);
+     ft(i,1,N)
+     {
+          sf("%s",str+1);
+          ac_insert(str,i);     // 读入串并插入
+     }
+     ac_fail();
+     sf("%d",&M);
+     ft(i,1,M)
+     {
+          sf("%s",mstr+1);
+          ac_find(mstr,i);
+          srt(ans);
+          if(sz(ans)!=0)
+          {
+               pf("web %d:",i);
+               feach(ans,i)
+                    pf(" %d",*i);
+               puts("");
+               cnt ++ ;
+          }
+          ans.clear();
+     }
+     pf("total: %d\n",cnt);
+     //head = new node();
+	 return 0;
+}
+
+#+END_SRC
+* Header
+#+BEGIN_SRC cpp
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <utility>
+#include <vector>
+#include <list>
+#include <string>
+#include <stack>
+#include <queue>
+#include <deque>
+#include <set>
+#include <map>
+#include <algorithm>
+#include <functional>
+#include <numeric>
+#include <bitset>
+#include <complex>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+#include <cstdlib>
+#include <ctime>
+#include <climits>
+using namespace std;
+
+#define ft(i,a,b) for (int i=(a);i<=(b);++i)
+#define fdt(i,a,b) for (int i=(a);i>=b;--i)
+#define feach(arr,e) for (typeof((arr).begin()) e=(arr).begin();e!=(arr).end();++e)
+#define fsubset(subset,set) for (int subset=set&(set-1);subset;subset=(subset-1)&set)
+#define fl(x,y) memset((x),char(y),sizeof(x))
+#define clr(x) fl(x,char(0))
+#define pb push_back
+#define mp make_pair
+#define x first
+#define y second
+#define sz(x) (int((x).size()))
+#define all(x) (x).begin(),(x).end()
+#define srt(x) sort(all(x))
+#define uniq(x) srt(x),(x).erase(unique(all(x)),x.end());
+#define present(c,x) ((c).find(x) != (c).end()) 
+#define cpresent(c,x) (find(all(c),x) != (c).end())
+#define pr pair
+#define que queue
+#define prq priority_queue
+#define itr iterator
+#define sf scanf
+#define pf printf
+#define pdb(prcs,x) printf("%."#prcs"f",(abs(x)<1e-##prcs)?0.0:x)
+#define input(in) freopen(in,"r",stdin)
+#define output(out) freopen(out,"w",stdout)
+
+#define lowbit(i) (i&(-i))
+
+typedef long long int LL;
+typedef pr<int,int> pii;
+typedef pr<LL,LL> pll;
+typedef pr<double,double> pdd;
+typedef pr<string,int> psi;
+typedef map<int,int> mii;
+typedef map<string,int> msi;
+typedef map<char,int> mci;
+typedef que<int> qi;
+typedef prq<int> pqi;
+typedef vector<int> veci;
+typedef vector<bool> vecb;
+typedef vector<string> vecs;
+typedef vector<double> vecdb;
+
+const int oo=(~0u)>>1;
+const LL lloo=(~0ull)>>1;
+const int INF = 0x7f7f7f7f;
+const double dboo=1e+20;
+const double eps=1e-8;
+const double pi=acos(-1.0);
+const int MOD=1000000007;
+
+
+#+END_SRC
