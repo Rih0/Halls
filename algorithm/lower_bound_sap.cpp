@@ -10,6 +10,8 @@
 #include<cstdlib>
 #include<algorithm>
 using namespace std;
+
+
 #define NEWNODE &data[++datap]
 const int INF=99999999;
 const int MAXN=500;

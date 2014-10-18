@@ -79,8 +79,8 @@ const double eps=1e-8;
 const double pi=acos(-1.0);
 const int MOD=1000000007;
 
-const int MAXN = 411 * 3;
 
+const int MAXN = 411 * 3;
 int N;
 int S,T;
 int love[MAXN];
