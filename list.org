@@ -1,4 +1,3 @@
-
 * Math
 ** Matrix Pow  
 #+BEGIN_SRC cpp
@@ -1012,7 +1011,6 @@ int hungary()
 
 #+END_SRC
 ** About graph
-
 *** SFPA minus-circle
 #+BEGIN_SRC cpp
 // 这段代码取自poj某题目，二分答案后，验证是否存在负权环
@@ -1114,6 +1112,105 @@ while(~scanf("%d%d",&n,&m))
 
 #+END_SRC
 
+*** LCA st_table
+#+begin_src c
+
+const int MAXN =11111;
+int t;
+int N;
+vector<int> maps[MAXN];
+
+const int SecMax=20;
+struct Lcatype
+{
+    int Dep[MAXN*3];
+    int Fir[MAXN*3];
+    int DFS[MAXN*3];
+    bool vis[MAXN];
+    int Dp;
+    int f[MAXN*3][21];//mul 3 for dfs sequence has 3*cnt of maxns
+    int Sec[SecMax];
+
+    void dfs(int num,int dep){
+
+        vis[num]=1;
+        Dep[++Dp]=dep;
+        DFS[Dp]=num;
+        Fir[num]=Dp;
+
+        for(vector<int>::itr i = maps[num].begin();i!=maps[num].end();++i)
+        {
+            int &to = *i;
+            if(!vis[to])
+            {
+                dfs(to,dep+1);
+                Dep[++Dp]=dep;
+                DFS[Dp]=num;
+            }
+        }
+    }
+
+    int Closed(int now){
+        for(int i=0;i<=SecMax;i++)
+        {
+            if(Sec[i+1]>=now)
+            return i;
+        }
+    }
+    void init(int treehead){
+
+        clr(vis);
+        Dp = 0;
+        dfs(treehead,0);//dfs
+        for(int i=1;i<=Dp;i++)
+        f[i][0]=i;
+        Sec[0]=1;
+        for(int i=1;i<SecMax;i++)
+        Sec[i]=(1<<i);
+        int K=Closed(Dp);
+        for(int i=1;i<=K;i++)
+        for(int j=1;j<=Dp-Sec[i]+1;j++)
+        {
+            if(Dep[f[j][i-1]]<Dep[f[j+Sec[i-1]][i-1]])
+            f[j][i]=f[j][i-1];
+            else
+            f[j][i]=f[j+Sec[i-1]][i-1];
+        }
+    }
+    int lca(int a,int b){
+        if(Fir[a]>Fir[b])
+        swap(a,b);
+        int i=Closed(Fir[b]-Fir[a]+1);
+        if(Dep[f[Fir[a]][i]]<Dep[f[Fir[b]-Sec[i]+1][i]])
+        return DFS[f[Fir[a]][i]];
+        else
+        return DFS[f[Fir[b]-Sec[i]+1][i]];
+    }
+};
+Lcatype lca;
+int a,b;
+bool showed[MAXN];
+int main(int argc, char *argv[])
+{
+    sf("%d",&t);
+    while(t--)
+    {
+        sf("%d",&N);
+        ft(i,1,N-1)
+            sf("%d%d",&a,&b),maps[a].pb(b),maps[b].pb(a),showed[b] = 1;
+        ft(i,1,N)
+            if(!showed[i])
+            lca.init(i);
+        sf("%d%d",&a,&b);
+        cout << lca.lca(a,b) << "\n";
+        clr(showed);
+        ft(i,1,N)
+            maps[i].clear();
+    }
+    return 0;
+}
+#+end_src
+    
 ** Dancing Links X
 #+BEGIN_SRC cpp
 /*
@@ -2474,3 +2571,5 @@ const int MOD=1000000007;
 
 
 #+END_SRC
+
+
