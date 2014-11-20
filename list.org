@@ -2309,7 +2309,6 @@ int main(int argc, char *argv[])
 }
 #+END_SRC
 
-
 ** left-shift Heap
 #+BEGIN_SRC cpp
 //all the functions return a number(except for top() ) representing a fake 'pointer'

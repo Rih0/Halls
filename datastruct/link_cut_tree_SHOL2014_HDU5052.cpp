@@ -74,6 +74,7 @@ const double eps=1e-8;
 const double pi=acos(-1.0);
 const int MOD=1000000007;
 const int MAXN = 51111;
+
 int T,N,Q;
 int a,b,c;
 struct node
