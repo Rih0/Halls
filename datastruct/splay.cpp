@@ -1,71 +1,87 @@
-const int MAXSN=MAXN+100;//最大点数!!!!!
-class spnode
-{
-public:
-    static spnode * NULLS;
-    spnode * l,*r,*fa;
-    int cnt;
+// #include <iostream>
+// #include <cstdlib>
+// #include <algorithm>
+// #include <cstdio>
+// using namespace std;
+// int data[10];
 
-    /*data member*/
-    bool flag_rev;
+const int MAXSN = 201111;
+const int INF = 0x7f7f7f7f;
+struct node
+{
+    static node * NULLS;
+    node *l,*r,*fa;
+    int cnt;
     int val;
-    spnode(){
-        cnt=val=0;
-        flag_rev = 0;
+    int mins;
+    int adder,rev;
+
+    node(){
+        val = adder = rev = 0;
+        cnt = 0;                // 与下面的不同，此处必须为0,为了NULLS
+        mins = INF;
     }
     void flip(){
-        if(this != NULLS)
-        {
+        if(this != NULLS){
             swap(l,r);
-            flag_rev = !flag_rev;
-            /*modify method*/
-            //------example--------
-            // sum+=ad*cnt;
-            // val+=ad;
-            // adds+=ad;
-            //---记得标记之间的传递----
+            rev = !rev;
         }
     }
-    void pushdown(){//传递标记操作
-        /*pushdown method*/
-        if(flag_rev)
+    void add(int num){
+        if(this != NULLS){
+            val += num;
+            mins += num;
+            adder += num;
+        }
+    }
+    void pushdown(){
+        if(this == NULLS) return;
+        if(rev)
         {
             l->flip(),r->flip();
-            flag_rev = 0;
+            rev = 0;
+        }
+        if(adder)
+        {
+            l->add(adder),r->add(adder);
+            adder = 0;
         }
     }
     void update(){
-        /*update method*/
-        cnt=l->cnt+r->cnt+1;
+        cnt = l->cnt + r->cnt + 1;
+        mins = min(l->mins,r->mins);
+        mins = min(mins,val);
     }
 };
-spnode * spnode::NULLS = new spnode;
-#define NULLS spnode::NULLS
+node * node::NULLS = new node;
+node * NULLS = node::NULLS;
 #define itvhead head->r->l
-template<class node>
-class splaytree
+
+struct splaytree
 {
-public:
     node * head;
     node memstack[MAXSN];
-    int memstackp;
-    int flag_show;
-    inline node * NEWNODE(node * fa){
-        node * p=&memstack[++memstackp];
-        p->l=p->r=NULLS;
-        p->fa=fa;
-        p->cnt = p->val = p->flag_rev = 0;
+    int memp;
+    inline node * NEWNODE(node * fa,int val) // 保证在不需要update时，值全部正确
+    {
+        node * p = &memstack[++memp];
+        p->l = p->r = NULLS;
+        p->fa = fa;
+        p->cnt = 1;             // 必须设为1
+        p->rev = p->adder = 0;
+        p->val = p->mins = val;
         return p;
     }
-    splaytree(){
-        head=NEWNODE(NULLS);
-        head->r=NEWNODE(head);
+    void init()
+    {
+        head = NEWNODE(NULLS,INF);
+        head->r = NEWNODE(head,INF);
         head->r->update();
         head->update();
     }
     void clear(){
-        memstackp = 0;
-        splaytree();
+        memp = 0;
+        init();
     }
     void routate(node * p){
         node * up=p->fa;
@@ -197,8 +213,8 @@ public:
         return ;
         p->pushdown();
         show(p->l);
-        pf("%d ",p->val);
+        printf("%d ",p->val);
         show(p->r);
     }
 };
-splaytree<spnode> splay;
+splaytree splay;

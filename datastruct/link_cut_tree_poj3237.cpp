@@ -319,7 +319,8 @@ void negpath(node * x , node * y)
         rt->update();                        // 更新
     }
 }
-void clear(){
+void clear()
+{
     for (int i = 0; i < MAXN; ++i)
     {
         maps[i].clear();
