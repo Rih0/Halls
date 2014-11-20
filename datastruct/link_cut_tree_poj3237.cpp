@@ -238,17 +238,12 @@ void dfs(int now)
 }
 void built()
 {
-    for (int i = 1; i <= N; ++i)
-    {
-
+    for (int i = 1; i <= N; ++i) {
         tonode[i] = NEWNODE(nodeval[i]);
     }
-    for (int i = 1; i <= N; ++i)
-    {
+    for (int i = 1; i <= N; ++i) {
         if(fa[i] != 0)
-        {
             tonode[i]->path = tonode[fa[i]];
-        }
     }
 }
 void init(){
